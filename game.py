@@ -1,4 +1,6 @@
 import random
+import display
+import pygame
 
 class PongGame:
     BOARD_WIDTH = 800
@@ -40,8 +42,8 @@ class PongGame:
         self.score = [0, 0]
 
     def updateGameState(self):
-        ballPosition[0] += ballVelocity[0]
-        ballPosition[1] += ballVelocity[1]
+        self.ballPosition[0] += self.ballVelocity[0]
+        self.ballPosition[1] += self.ballVelocity[1]
 
         # Ball Physics
         if self.ballPosition[0] < PongGame.PADDLE_HOR_BUFFER:
@@ -67,8 +69,8 @@ class PongGame:
             self.ballVelocity[0] *= -1
 
         # Player response
-        for ind, p in enumerate(players):
-            playerMove = p.makeMove(getBoardState(ind))
+        for ind, p in enumerate(self.players):
+            playerMove = p.makeMove(self.getBoardState(ind))
             if playerMove == PongGame.MOVE_UP:
                 self.paddlePositionsY[ind] -= PongGame.PADDLE_VELOCITY
                 if self.paddlePositionsY[1] - PongGame.PADDLE_HEIGHT / 2 < 0:
@@ -84,7 +86,7 @@ class PongGame:
     
     def getBoardState(self, currentPlayerInd):
         # The board state is [currPos, otherPos, ballPos]
-        return [self.paddlePositionsY[currentPlayerInd][::], self.paddlesPositionsY[1 - currentPlayerInd][::], self.ballPosition[::]]
+        return [self.paddlePositionsY[currentPlayerInd], self.paddlePositionsY[1 - currentPlayerInd], self.ballPosition[::]]
 
     def getScore(self):
         return self.score[::]
@@ -93,6 +95,27 @@ class PongGame:
         self.ballPosition = [PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT / 2]
         self.ballVelocity = [PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1), PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1)]
 
+    def drawToScreen(self, screenSurface):
+        # Draw ball
+        pygame.draw.rect(screenSurface, display.WHITE, ( int(self.ballPosition[0] - PongGame.BALL_SIZE / 2), 
+                                                                int(self.ballPosition[1] - PongGame.BALL_SIZE / 2), 
+                                                                PongGame.BALL_SIZE, 
+                                                                PongGame.BALL_SIZE))
+        # Draw paddles
+        for i in range(len(self.players)):
+            pygame.draw.rect(screenSurface, display.WHITE, ( int(self.paddlePositionsX[i] - PongGame.PADDLE_WIDTH / 2), 
+                                                                    int(self.paddlePositionsY[i] - PongGame.PADDLE_HEIGHT / 2), 
+                                                                    PongGame.PADDLE_WIDTH, 
+                                                                    PongGame.PADDLE_HEIGHT))
+        
+        s1Surface = display.SCORE_FONT.render(str(self.score[0]), False, display.WHITE)
+        s2Surface = display.SCORE_FONT.render(str(self.score[1]), False, display.WHITE)
+
+        screenSurface.blit(s1Surface, (PongGame.BOARD_WIDTH / 2 - 50 - display.SCORE_FONT_SIZE, 10))
+        screenSurface.blit(s2Surface, (PongGame.BOARD_WIDTH / 2 + 50, 10))
+
+        pygame.draw.line(screenSurface, display.WHITE, (PongGame.BOARD_WIDTH / 2, 0), (PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT), 1)
+
 
 class PongPlayer:
 
@@ -100,7 +123,7 @@ class PongPlayer:
         pass
 
     # Provide the board state and return the desired move
-    def makeMove(boardState):
+    def makeMove(self, boardState):
         resultMove = PongGame.MOVE_STAY
 
         return resultMove
