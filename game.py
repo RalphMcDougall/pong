@@ -10,10 +10,10 @@ class PongGame:
 
     PADDLE_HOR_BUFFER = 5
 
-    PADDLE_VELOCITY = 5
+    PADDLE_VELOCITY = 4
 
     BALL_SIZE = 4
-    BALL_VELOCITY_SCALAR = 1
+    BALL_VELOCITY_SCALAR = 4
 
     MOVE_UP = 0
     MOVE_DOWN = 1
@@ -30,29 +30,22 @@ class PongGame:
 
     def __init__(self, player1, player2):
         self.players = [player1, player2]
-        self.paddlePositionsX = [
-            0 + PongGame.PADDLE_WIDTH / 2 + PongGame.PADDLE_HOR_BUFFER,
-            PongGame.BOARD_WIDTH - PongGame.PADDLE_WIDTH / 2 - PongGame.PADDLE_HOR_BUFFER
-        ]
-        self.paddlePositionsY = [
-            PongGame.BOARD_HEIGHT / 2, 
-            PongGame.BOARD_HEIGHT / 2
-        ]
-        self.resetBallPosition()
+        self.resetBoardState()
         self.score = [0, 0]
 
     def updateGameState(self):
         self.ballPosition[0] += self.ballVelocity[0]
         self.ballPosition[1] += self.ballVelocity[1]
 
-        # Ball Physics
+        # Ball out of bounds
         if self.ballPosition[0] < PongGame.PADDLE_HOR_BUFFER:
             self.score[1] += 1
-            self.resetBallPosition()
+            self.resetBoardState()
         elif self.ballPosition[0] > PongGame.BOARD_WIDTH - PongGame.PADDLE_HOR_BUFFER:
             self.score[0] += 1
-            self.resetBallPosition()
+            self.resetBoardState()
         
+        # Top bounce
         if self.ballPosition[1] - PongGame.BALL_SIZE / 2 < 0:
             self.ballPosition[1] = PongGame.BALL_SIZE / 2
             self.ballVelocity[1] *= -1
@@ -63,9 +56,9 @@ class PongGame:
         # Handle hitting ball back
         ballL = self.ballPosition[0] - PongGame.BALL_SIZE / 2
         ballR = self.ballPosition[0] + PongGame.BALL_SIZE / 2
-        if ballL > self.paddlePositionsX[0] and ballL <= self.paddlePositionsX[0] and self.ballVelocity[0] < 0:
+        if (ballL > self.paddlePositionsX[0] - PongGame.PADDLE_WIDTH / 2) and (ballL <= self.paddlePositionsX[0] + PongGame.PADDLE_WIDTH / 2) and (self.ballVelocity[0] < 0) and (self.ballPosition[1] - PongGame.BALL_SIZE / 2 > self.paddlePositionsY[0] - PongGame.PADDLE_HEIGHT / 2) and (self.ballPosition[1] + PongGame.BALL_SIZE / 2 < self.paddlePositionsY[0] + PongGame.PADDLE_HEIGHT / 2):
             self.ballVelocity[0] *= -1
-        elif ballR < self.paddlePositionsX[1] and ballR >= self.paddlePositionsX[1] and self.ballVelocity[0] > 0:
+        elif (ballR < self.paddlePositionsX[1] + PongGame.PADDLE_WIDTH / 2) and (ballR >= self.paddlePositionsX[1] - PongGame.PADDLE_WIDTH / 2) and (self.ballVelocity[0] > 0) and (self.ballPosition[1] - PongGame.BALL_SIZE / 2 > self.paddlePositionsY[1] - PongGame.PADDLE_HEIGHT / 2) and (self.ballPosition[1] + PongGame.BALL_SIZE / 2 < self.paddlePositionsY[1] + PongGame.PADDLE_HEIGHT / 2):
             self.ballVelocity[0] *= -1
 
         # Player response
@@ -91,7 +84,15 @@ class PongGame:
     def getScore(self):
         return self.score[::]
 
-    def resetBallPosition(self):
+    def resetBoardState(self):
+        self.paddlePositionsX = [
+            0 + PongGame.PADDLE_WIDTH / 2 + PongGame.PADDLE_HOR_BUFFER,
+            PongGame.BOARD_WIDTH - PongGame.PADDLE_WIDTH / 2 - PongGame.PADDLE_HOR_BUFFER
+        ]
+        self.paddlePositionsY = [
+            PongGame.BOARD_HEIGHT / 2, 
+            PongGame.BOARD_HEIGHT / 2
+        ]
         self.ballPosition = [PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT / 2]
         self.ballVelocity = [PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1), PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1)]
 
@@ -143,4 +144,18 @@ class UserControlledPongPlayer(PongPlayer):
         elif pressed[pygame.K_DOWN]:
             resultMove = PongGame.MOVE_DOWN
 
+        return resultMove
+
+
+class BasicPongPlayer(PongPlayer):
+
+    def __init__(self):
+        pass
+
+    def makeMove(self, boardState):
+        resultMove = PongGame.MOVE_STAY
+        if boardState[0] < boardState[2][1]:
+            resultMove = PongGame.MOVE_DOWN
+        elif boardState[0] > boardState[2][1]:
+            resultMove = PongGame.MOVE_UP
         return resultMove

@@ -6,7 +6,7 @@ WHITE = (255, 255, 255)
 SCORE_FONT_SIZE = 30
 SCORE_FONT = None
 
-FPS = 30
+FPS = 60
 
 class DisplayScreen:
 
@@ -24,6 +24,9 @@ class DisplayScreen:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.running = False
     
     def isRunning(self):
         return self.running
