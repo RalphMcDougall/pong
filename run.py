@@ -1,12 +1,12 @@
 import game
 import display
 
-def setup():
+def run():
     display.setupDisplay()
 
     displayScreen = display.DisplayScreen(game.PongGame.BOARD_WIDTH, game.PongGame.BOARD_HEIGHT)
 
-    p1 = game.PongPlayer()
+    p1 = game.UserControlledPongPlayer()
     p2 = game.PongPlayer()
     currGame = game.PongGame(p1, p2)
 
@@ -22,4 +22,4 @@ def setup():
     display.closeDisplay()   
 
 if __name__ == "__main__":
-    setup()
+    run()

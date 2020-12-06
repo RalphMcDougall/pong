@@ -73,12 +73,12 @@ class PongGame:
             playerMove = p.makeMove(self.getBoardState(ind))
             if playerMove == PongGame.MOVE_UP:
                 self.paddlePositionsY[ind] -= PongGame.PADDLE_VELOCITY
-                if self.paddlePositionsY[1] - PongGame.PADDLE_HEIGHT / 2 < 0:
-                    self.paddlePositionsY[1] = PongGame.PADDLE_HEIGHT / 2
+                if self.paddlePositionsY[ind] - PongGame.PADDLE_HEIGHT / 2 < 0:
+                    self.paddlePositionsY[ind] = PongGame.PADDLE_HEIGHT / 2
             elif playerMove == PongGame.MOVE_DOWN:
                 self.paddlePositionsY[ind] += PongGame.PADDLE_VELOCITY
-                if self.paddlePositionsY[1] + PongGame.PADDLE_HEIGHT / 2 >= PongGame.BOARD_HEIGHT:
-                    self.paddlePositionsY[1] = PongGame.BOARD_HEIGHT - PongGame.PADDLE_HEIGHT / 2 - 1
+                if self.paddlePositionsY[ind] + PongGame.PADDLE_HEIGHT / 2 >= PongGame.BOARD_HEIGHT:
+                    self.paddlePositionsY[ind] = PongGame.BOARD_HEIGHT - PongGame.PADDLE_HEIGHT / 2 - 1
             elif playerMove == PongGame.MOVE_STAY:
                 pass
             else:
@@ -125,5 +125,22 @@ class PongPlayer:
     # Provide the board state and return the desired move
     def makeMove(self, boardState):
         resultMove = PongGame.MOVE_STAY
+
+        return resultMove
+
+
+class UserControlledPongPlayer(PongPlayer):
+
+    def __init__(self):
+        pass
+
+    def makeMove(self, boardState):
+        resultMove = PongGame.MOVE_STAY
+
+        pressed = pygame.key.get_pressed()
+        if pressed[pygame.K_UP]:
+            resultMove = PongGame.MOVE_UP
+        elif pressed[pygame.K_DOWN]:
+            resultMove = PongGame.MOVE_DOWN
 
         return resultMove
