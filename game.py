@@ -3,7 +3,7 @@ import display
 import pygame
 
 class PongGame:
-    BOARD_WIDTH = 800
+    BOARD_WIDTH = 1000
     BOARD_HEIGHT = 600
     PADDLE_WIDTH = 10
     PADDLE_HEIGHT = 50
@@ -13,7 +13,7 @@ class PongGame:
     PADDLE_VELOCITY = 4
 
     BALL_SIZE = 4
-    BALL_VELOCITY_SCALAR = 4
+    BALL_VELOCITY_SCALAR = 6
 
     MOVE_UP = 0
     MOVE_DOWN = 1
