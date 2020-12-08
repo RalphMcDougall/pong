@@ -15,10 +15,11 @@ class PongGym(gym.Env):
 
     def __init__(self):
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Tuple( (spaces.Box(low=0, high=game.PongGame.BOARD_HEIGHT - 1, dtype=np.float32),
-                                                spaces.Box(low=0, high=game.PongGame.BOARD_HEIGHT - 1, dtype=np.float32),
-                                                spaces.Box(low=0, high=game.PongGame.BOARD_WIDTH - 1, dtype=np.float32),
-                                                spaces.Box(low=0, high=game.PongGame.BOARD_HEIGHT - 1, dtype=np.float32)))
+        self.observation_space = spaces.Tuple( (spaces.Box(low=0, high=(game.PongGame.BOARD_HEIGHT - 1), dtype=np.float32, shape=(5,1)),
+                                                spaces.Box(low=0, high=(game.PongGame.BOARD_WIDTH - 1), dtype=np.float32, shape=(5,1)),
+                                                spaces.Box(low=0, high=(game.PongGame.BOARD_HEIGHT - 1), dtype=np.float32, shape=(5,1)),
+                                                spaces.Box(low=0, high=(game.PongGame.BOARD_WIDTH - 1), dtype=np.float32, shape=(5,1)),
+                                                spaces.Box(low=0, high=(game.PongGame.BOARD_HEIGHT - 1), dtype=np.float32, shape=(5,1))))
         self.seed()
         self.reset()
 
@@ -26,22 +27,69 @@ class PongGym(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
 
     def step(self, action):
-        pass
+        newState = []
+        reward = 0
+        done = False
+
+        if action == game.PongGame.MOVE_UP:
+            self.paddleY -= game.PongGame.PADDLE_VELOCITY
+            if self.paddleY < game.PongGame.PADDLE_HEIGHT / 2:
+                self.paddleY = game.PongGame.PADDLE_HEIGHT / 2
+        elif action == game.PongGame.MOVE_DOWN:
+            self.paddleY += game.PongGame.PADDLE_VELOCITY
+            if self.paddleY + game.PongGame.PADDLE_HEIGHT / 2 >= game.PongGame.BOARD_HEIGHT:
+                self.paddleY = game.PongGame.BOARD_HEIGHT - game.PongGame.PADDLE_HEIGHT / 2
+
+        self.ballX += self.ballVX
+        self.ballY += self.ballVY
+        #print(self.ballX, self.ballY)
+
+        if self.ballX < game.PongGame.PADDLE_HOR_BUFFER:
+            reward = -10
+            #print("OOF")
+            #self.reset()
+            done = True
+
+        if self.ballY - game.PongGame.BALL_SIZE / 2 < 0 and self.ballVY < 0:
+            self.ballY = game.PongGame.BALL_SIZE / 2
+            self.ballVY *= -1
+        elif self.ballY + game.PongGame.BALL_SIZE / 2 >= game.PongGame.BOARD_HEIGHT and self.ballVY > 0:
+            self.ballY = game.PongGame.BOARD_HEIGHT - game.PongGame.BALL_SIZE / 2 - 1
+            self.ballVY *= -1
+        
+        if self.ballX + game.PongGame.BALL_SIZE / 2 >= game.PongGame.BOARD_WIDTH - game.PongGame.PADDLE_HOR_BUFFER - game.PongGame.PADDLE_WIDTH and self.ballVX > 0:
+            self.ballX = game.PongGame.BOARD_WIDTH - game.PongGame.PADDLE_HOR_BUFFER - game.PongGame.PADDLE_WIDTH - game.PongGame.BALL_SIZE / 2 - 1
+            self.ballVX *= -1
+        elif self.ballX - game.PongGame.BALL_SIZE / 2 < game.PongGame.PADDLE_HOR_BUFFER + game.PongGame.PADDLE_WIDTH and (self.ballVX < 0) and (self.ballY + game.PongGame.BALL_SIZE / 2 >= self.paddleY - game.PongGame.PADDLE_HEIGHT / 2) and (self.ballY - game.PongGame.BALL_SIZE / 2 > self.paddleY + game.PongGame.PADDLE_HEIGHT / 2):
+            self.ballX = game.PongGame.PADDLE_HOR_BUFFER + game.PongGame.PADDLE_WIDTH + game.PongGame.BALL_SIZE / 2
+            self.ballVX *= -1
+            reward = 10
+
+        newState = [self.paddleY, self.ballX, self.ballY, self.ballVX, self.ballVY]
+        #print(newState)
+        return newState, reward, done, {}
 
     def reset(self):
-        pass
+        self.paddleY = game.PongGame.BOARD_HEIGHT / 2
+        self.ballX = game.PongGame.BOARD_WIDTH / 2
+        self.ballY = game.PongGame.BOARD_HEIGHT / 2
+        self.ballVX = game.PongGame.BALL_VELOCITY_SCALAR * (2 * np.random.randint(0, 2) - 1)
+        #self.ballVX = game.PongGame.BALL_VELOCITY_SCALAR * (-1)
+        self.ballVY = game.PongGame.BALL_VELOCITY_SCALAR * (2 * np.random.randint(0, 2) - 1)
+
+        return [self.paddleY, self.ballX, self.ballY, self.ballVX, self.ballVY]
 
 
-
+print("Initialising")
 seed = 42
 gamma = 0.99
-max_steps_per_episode = 10000
+max_steps_per_episode = 100
 env = PongGym()
 env.seed(seed)
 eps = np.finfo(np.float32).eps.item()
 
 num_inputs = 5 # From the game state
-num_actions = 2
+num_actions = 3
 num_hidden = 128
 
 inputs = layers.Input(shape=(num_inputs,))
@@ -58,6 +106,8 @@ critic_value_history = []
 rewards_history = []
 running_reward = 0
 episode_count = 0
+
+print("Starting training")
 
 while True:
     state = env.reset()
@@ -100,8 +150,8 @@ while True:
             critic_losses.append(huber_loss(tf.expand_dims(value, 0), tf.expand_dims(ret, 0)))
 
         loss_value = sum(actor_losses) + sum(critic_losses)
-        grads = tape.gradient(loss_value, nmodel.trainable_variables)
-        optimzer.apply_gradients(zip(grads, model.trainable_variables))
+        grads = tape.gradient(loss_value, model.trainable_variables)
+        optimiser.apply_gradients(zip(grads, model.trainable_variables))
 
         action_probs_history.clear()
         critic_value_history.clear()
@@ -110,7 +160,11 @@ while True:
     episode_count += 1
     if episode_count % 10 == 0:
         print("running reward:", str(running_reward), "at episode", str(episode_count))
+        model.save("models/episode_" + str(episode_count))
+        model.save("models/final")
     
-    if running_reward > 195:
+    if running_reward > 30:
         print("Solved at episode", str(episode_count))
         break
+
+model.save("models/final")
