@@ -2,6 +2,9 @@ import random
 import display
 import pygame
 
+import tensorflow as tf
+from tensorflow import keras
+
 class PongGame:
     BOARD_WIDTH = 1000
     BOARD_HEIGHT = 600
@@ -18,15 +21,6 @@ class PongGame:
     MOVE_UP = 0
     MOVE_DOWN = 1
     MOVE_STAY = 2
-
-    players = []
-    paddlePositionsX = []
-    paddlePositionsY = []
-
-    ballPosition = []
-    ballVelocity = []
-
-    score = []
 
     def __init__(self, player1, player2):
         self.players = [player1, player2]
@@ -78,8 +72,12 @@ class PongGame:
                 print("Invalid move (", playerMove, ") for player:", p)
     
     def getBoardState(self, currentPlayerInd):
-        # The board state is [currPos, otherPos, ballPos]
-        return [self.paddlePositionsY[currentPlayerInd], self.paddlePositionsY[1 - currentPlayerInd], self.ballPosition[::]]
+        # The board state is [currPos, otherPos, ballPosX (depending on player), ballPosY]
+        return [self.paddlePositionsY[currentPlayerInd],
+                [self.ballPosition[0], PongGame.BOARD_WIDTH - self.ballPosition[0] - 1][currentPlayerInd], 
+                self.ballPosition[1],
+                [self.ballVelocity[0], self.ballVelocity[0] * (-1)][currentPlayerInd],
+                self.ballVelocity[1]]
 
     def getScore(self):
         return self.score[::]
@@ -112,7 +110,7 @@ class PongGame:
         s1Surface = display.SCORE_FONT.render(str(self.score[0]), False, display.WHITE)
         s2Surface = display.SCORE_FONT.render(str(self.score[1]), False, display.WHITE)
 
-        screenSurface.blit(s1Surface, (PongGame.BOARD_WIDTH / 2 - 50 - display.SCORE_FONT_SIZE, 10))
+        screenSurface.blit(s1Surface, (PongGame.BOARD_WIDTH / 2 - 50 - display.SCORE_FONT_SIZE / 2, 10))
         screenSurface.blit(s2Surface, (PongGame.BOARD_WIDTH / 2 + 50, 10))
 
         pygame.draw.line(screenSurface, display.WHITE, (PongGame.BOARD_WIDTH / 2, 0), (PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT), 1)
@@ -154,8 +152,75 @@ class BasicPongPlayer(PongPlayer):
 
     def makeMove(self, boardState):
         resultMove = PongGame.MOVE_STAY
-        if boardState[0] < boardState[2][1]:
+        if boardState[0] < boardState[2]:
             resultMove = PongGame.MOVE_DOWN
-        elif boardState[0] > boardState[2][1]:
+        elif boardState[0] > boardState[2]:
             resultMove = PongGame.MOVE_UP
         return resultMove
+
+class PerfectPongPlayer(PongPlayer):
+
+    def __init__(self):
+        pass
+
+    def makeMove(self, boardState):
+        resultMove = PongGame.MOVE_STAY
+        
+        # This can be more efficient, but it's fine for now
+        targetY = -1
+
+        ballX = boardState[1]
+        ballY = boardState[2]
+        ballVX = boardState[3]
+        ballVY = boardState[4]
+
+        while ballX > PongGame.PADDLE_HOR_BUFFER + PongGame.PADDLE_WIDTH:
+            ballX += ballVX
+            ballY += ballVY
+
+            if ballY - PongGame.BALL_SIZE / 2 < 0:
+                ballY = PongGame.BALL_SIZE / 2
+                ballVY *= -1
+            elif ballY + PongGame.BALL_SIZE / 2 >= PongGame.BOARD_HEIGHT:
+                ballY = PongGame.BOARD_HEIGHT - PongGame.BALL_SIZE / 2 - 1
+                ballVY *= -1
+            
+            if ballX + PongGame.BALL_SIZE / 2 >= PongGame.BOARD_WIDTH - PongGame.PADDLE_HOR_BUFFER - PongGame.PADDLE_WIDTH:
+                ballX = PongGame.BOARD_WIDTH - PongGame.PADDLE_HOR_BUFFER - PongGame.PADDLE_WIDTH - PongGame.BALL_SIZE / 2
+                ballVX *= -1
+        targetY = ballY
+        
+        if abs(boardState[0] - targetY) < PongGame.PADDLE_HEIGHT / 4:
+            resultMove = PongGame.MOVE_STAY
+        elif boardState[0] < targetY:
+            resultMove = PongGame.MOVE_DOWN
+        elif boardState[0] > targetY:
+            resultMove = PongGame.MOVE_UP
+
+
+        return resultMove
+
+
+class RLPongPlayer(PongPlayer):
+
+    def __init__(self):
+        print("Loading model")
+        self.model = keras.models.load_model("models/final")
+        print(self.model.summary())
+        print("Model: " + str(self.model))
+
+    def makeMove(self, boardState):
+        state = tf.convert_to_tensor(boardState)
+        state = tf.expand_dims(state, 0)
+
+        action_probs, critic_value = self.model(state)
+
+        print(action_probs.numpy())
+        #mVal = max(action_probs[0])
+        #print(mVal)
+        #print(mVal.numpy())
+
+        nextMoveInd = tf.math.argmax(action_probs[0]).numpy()
+        print(nextMoveInd)
+
+        return nextMoveInd
