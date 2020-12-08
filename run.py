@@ -6,8 +6,8 @@ def run():
 
     displayScreen = display.DisplayScreen(game.PongGame.BOARD_WIDTH, game.PongGame.BOARD_HEIGHT)
 
-    p1 = game.UserControlledPongPlayer()
-    p2 = game.BasicPongPlayer()
+    p1 = game.PerfectPongPlayer()
+    p2 = game.RLPongPlayer()
     currGame = game.PongGame(p1, p2)
 
     while displayScreen.isRunning():
