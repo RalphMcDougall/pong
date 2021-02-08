@@ -52,7 +52,7 @@ class DisplayScreen:
 class SelectionScreen:
 
     def __init__(self, options):
-        self.options = [options, options]
+        self.options = options[::]
         self.selected = [0, 0]
         self.focus = 0 # 0 = left, 1 = right
         self.done = False
@@ -60,10 +60,14 @@ class SelectionScreen:
     def isDone(self):
         return self.done
 
-    def updateState(self):
+    def updateState(self, displayScreen):
         for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
+            if event.type == pygame.QUIT:
+                displayScreen.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    displayScreen.running = False
+                elif event.key == pygame.K_RETURN:
                     self.done = True
                 elif event.key == pygame.K_LEFT:
                     self.focus = 0

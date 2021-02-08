@@ -95,7 +95,8 @@ class PongGame:
             self.players[i].reset()
 
         self.ballPosition = [PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT / 2]
-        self.ballVelocity = [PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1), PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1)]
+        self.ballVelocity = [   PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1), 
+                                PongGame.BALL_VELOCITY_SCALAR * (2 * random.randint(0, 1) - 1)]
 
     def drawToScreen(self, screenSurface):
         # Draw ball
@@ -118,8 +119,8 @@ class PongGame:
 
         pygame.draw.line(screenSurface, display.WHITE, (PongGame.BOARD_WIDTH / 2, 0), (PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT), 1)
 
-        p1Surface = display.PLAYER_FONT.render(self.players[0].name, True, display.WHITE)
-        p2Surface = display.PLAYER_FONT.render(self.players[1].name, True, display.WHITE)
+        p1Surface = display.PLAYER_FONT.render(self.players[0].name, True, display.GREEN)
+        p2Surface = display.PLAYER_FONT.render(self.players[1].name, True, display.GREEN)
 
         screenSurface.blit(p1Surface, (PongGame.PADDLE_HOR_BUFFER, PongGame.BOARD_HEIGHT - PongGame.PADDLE_HOR_BUFFER - p1Surface.get_rect().height, 
                                         p1Surface.get_rect().width, p1Surface.get_rect().height))
@@ -188,9 +189,14 @@ class PerfectPongPlayer(PongPlayer):
         resultMove = PongGame.MOVE_STAY
         if boardState[1] < PongGame.PADDLE_HOR_BUFFER + PongGame.PADDLE_WIDTH + 50 and boardState[3] > 0:
             self.recalculated = False
-        if (self.recalculated) and (abs(boardState[0] - self.targetY) < PongGame.PADDLE_HEIGHT / 4):
-            resultMove = PongGame.MOVE_STAY
-            return resultMove
+
+        if self.recalculated and (abs(boardState[0] - self.targetY) < PongGame.PADDLE_HEIGHT / 4):
+            return PongGame.MOVE_STAY
+        elif self.recalculated and self.targetY < boardState[0]:
+            return PongGame.MOVE_UP
+        elif self.recalculated and self.targetY > boardState[0]:
+            return PongGame.MOVE_DOWN
+        
         self.recalculated = True
 
         # This can be more efficient, but it's fine for now
@@ -216,7 +222,7 @@ class PerfectPongPlayer(PongPlayer):
                 ballVX *= -1
         self.targetY = ballY
         
-        if abs(boardState[0] - self.targetY) < PongGame.PADDLE_HEIGHT / 4:
+        if abs(boardState[0] - self.targetY) < PongGame.PADDLE_HEIGHT / 8:
             resultMove = PongGame.MOVE_STAY
         elif boardState[0] < self.targetY:
             resultMove = PongGame.MOVE_DOWN
@@ -240,10 +246,10 @@ class MLPongPlayer(PongPlayer):
 
         action_probs = self.model.predict(state)[0]
 
-        print(round(action_probs[0], 2), round(action_probs[1], 2), round(action_probs[2], 2))
+        #print(round(action_probs[0], 2), round(action_probs[1], 2), round(action_probs[2], 2))
 
         nextMoveInd = tf.math.argmax(action_probs).numpy()
-        print(nextMoveInd)
+        #print(nextMoveInd)
 
         return nextMoveInd
 
