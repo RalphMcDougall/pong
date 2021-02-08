@@ -116,8 +116,8 @@ def setupDisplay():
     global SCORE_FONT, SCORE_FONT_SIZE, PLAYER_FONT, PLAYER_FONT_SIZE
     pygame.init()
     pygame.font.init()
-    SCORE_FONT = pygame.font.Font("PressStart2P.ttf", SCORE_FONT_SIZE)
-    PLAYER_FONT = pygame.font.Font("Roboto-Bold.ttf", PLAYER_FONT_SIZE)
+    SCORE_FONT = pygame.font.Font("resources/PressStart2P.ttf", SCORE_FONT_SIZE)
+    PLAYER_FONT = pygame.font.Font("resources/Roboto-Bold.ttf", PLAYER_FONT_SIZE)
 
 
 def closeDisplay():
