@@ -32,10 +32,10 @@ class PongGame:
         self.ballPosition[1] += self.ballVelocity[1]
 
         # Ball out of bounds
-        if self.ballPosition[0] < PongGame.PADDLE_HOR_BUFFER:
+        if self.ballPosition[0] < 0:
             self.score[1] += 1
             self.resetBoardState()
-        elif self.ballPosition[0] > PongGame.BOARD_WIDTH - PongGame.PADDLE_HOR_BUFFER:
+        elif self.ballPosition[0] >= PongGame.BOARD_WIDTH:
             self.score[0] += 1
             self.resetBoardState()
         
@@ -113,10 +113,19 @@ class PongGame:
         s1Surface = display.SCORE_FONT.render(str(self.score[0]), False, display.WHITE)
         s2Surface = display.SCORE_FONT.render(str(self.score[1]), False, display.WHITE)
 
-        screenSurface.blit(s1Surface, (PongGame.BOARD_WIDTH / 2 - 50 - display.SCORE_FONT_SIZE / 2, 10))
-        screenSurface.blit(s2Surface, (PongGame.BOARD_WIDTH / 2 + 50, 10))
+        screenSurface.blit(s1Surface, (PongGame.BOARD_WIDTH / 2 - 50 - s1Surface.get_rect().width / 2, 10))
+        screenSurface.blit(s2Surface, (PongGame.BOARD_WIDTH / 2 + 50 - s2Surface.get_rect().width / 2, 10))
 
         pygame.draw.line(screenSurface, display.WHITE, (PongGame.BOARD_WIDTH / 2, 0), (PongGame.BOARD_WIDTH / 2, PongGame.BOARD_HEIGHT), 1)
+
+        p1Surface = display.PLAYER_FONT.render(self.players[0].name, True, display.WHITE)
+        p2Surface = display.PLAYER_FONT.render(self.players[1].name, True, display.WHITE)
+
+        screenSurface.blit(p1Surface, (PongGame.PADDLE_HOR_BUFFER, PongGame.BOARD_HEIGHT - PongGame.PADDLE_HOR_BUFFER - p1Surface.get_rect().height, 
+                                        p1Surface.get_rect().width, p1Surface.get_rect().height))
+        screenSurface.blit(p2Surface, (PongGame.BOARD_WIDTH - PongGame.PADDLE_HOR_BUFFER - p2Surface.get_rect().width, 
+                                        PongGame.BOARD_HEIGHT - PongGame.PADDLE_HOR_BUFFER - p1Surface.get_rect().height, 
+                                        p1Surface.get_rect().width, p1Surface.get_rect().height))
 
 
 class PongPlayer:
