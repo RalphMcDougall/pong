@@ -10,6 +10,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
+import game
 
 class PongGym(gym.Env):
 
@@ -27,79 +28,53 @@ class PongGym(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
 
     def step(self, action):
-        newState = []
         reward = 0
         done = False
-
-        if action == game.PongGame.MOVE_UP:
-            self.paddleY -= game.PongGame.PADDLE_VELOCITY
-            if self.paddleY < game.PongGame.PADDLE_HEIGHT / 2:
-                self.paddleY = game.PongGame.PADDLE_HEIGHT / 2
-        elif action == game.PongGame.MOVE_DOWN:
-            self.paddleY += game.PongGame.PADDLE_VELOCITY
-            if self.paddleY + game.PongGame.PADDLE_HEIGHT / 2 >= game.PongGame.BOARD_HEIGHT:
-                self.paddleY = game.PongGame.BOARD_HEIGHT - game.PongGame.PADDLE_HEIGHT / 2
-
-        self.ballX += self.ballVX
-        self.ballY += self.ballVY
-        #print(self.ballX, self.ballY)
-
-        if self.ballX < game.PongGame.PADDLE_HOR_BUFFER:
-            reward = -10
-            #print("OOF")
-            #self.reset()
+        initialScore = self.game.getScore()
+        initialBallDir = self.game.getBoardState(1)[3]
+        self.dummy.setNextMove(action)
+        self.game.updateGameState()
+        newScore = self.game.getScore()
+        if newScore[0] > initialScore[0]:
+            reward = -1
+            reward = -1 * (self.game.getBoardState(1)[0] - self.game.getBoardState(1)[2]) ** 2
+            #print("CONCEDED")
             done = True
+        if initialBallDir < 0 and self.game.getBoardState(1)[3] > 0:
+            reward = 100
+            print("RETURNED")
+        #if newScore[1] > initialScore[1]:
+        #    reward = 1.5
 
-        if self.ballY - game.PongGame.BALL_SIZE / 2 < 0 and self.ballVY < 0:
-            self.ballY = game.PongGame.BALL_SIZE / 2
-            self.ballVY *= -1
-        elif self.ballY + game.PongGame.BALL_SIZE / 2 >= game.PongGame.BOARD_HEIGHT and self.ballVY > 0:
-            self.ballY = game.PongGame.BOARD_HEIGHT - game.PongGame.BALL_SIZE / 2 - 1
-            self.ballVY *= -1
-        
-        if self.ballX + game.PongGame.BALL_SIZE / 2 >= game.PongGame.BOARD_WIDTH - game.PongGame.PADDLE_HOR_BUFFER - game.PongGame.PADDLE_WIDTH and self.ballVX > 0:
-            self.ballX = game.PongGame.BOARD_WIDTH - game.PongGame.PADDLE_HOR_BUFFER - game.PongGame.PADDLE_WIDTH - game.PongGame.BALL_SIZE / 2 - 1
-            self.ballVX *= -1
-        elif self.ballX - game.PongGame.BALL_SIZE / 2 < game.PongGame.PADDLE_HOR_BUFFER + game.PongGame.PADDLE_WIDTH and (self.ballVX < 0) and (self.ballY + game.PongGame.BALL_SIZE / 2 >= self.paddleY - game.PongGame.PADDLE_HEIGHT / 2) and (self.ballY - game.PongGame.BALL_SIZE / 2 > self.paddleY + game.PongGame.PADDLE_HEIGHT / 2):
-            self.ballX = game.PongGame.PADDLE_HOR_BUFFER + game.PongGame.PADDLE_WIDTH + game.PongGame.BALL_SIZE / 2
-            self.ballVX *= -1
-            reward = 10
-
-        newState = [self.paddleY, self.ballX, self.ballY, self.ballVX, self.ballVY]
-        #print(newState)
-        return newState, reward, done, {}
+        return self.game.getBoardState(1), reward, done, {}
 
     def reset(self):
-        self.paddleY = game.PongGame.BOARD_HEIGHT / 2
-        self.ballX = game.PongGame.BOARD_WIDTH / 2
-        self.ballY = game.PongGame.BOARD_HEIGHT / 2
-        self.ballVX = game.PongGame.BALL_VELOCITY_SCALAR * (2 * np.random.randint(0, 2) - 1)
-        #self.ballVX = game.PongGame.BALL_VELOCITY_SCALAR * (-1)
-        self.ballVY = game.PongGame.BALL_VELOCITY_SCALAR * (2 * np.random.randint(0, 2) - 1)
+        self.dummy = game.DummyPongPlayer()
+        self.game = game.PongGame(game.PerfectPongPlayer(), self.dummy)
 
-        return [self.paddleY, self.ballX, self.ballY, self.ballVX, self.ballVY]
+        return self.game.getBoardState(1)
 
 
 print("Initialising")
 seed = 42
 gamma = 0.99
-max_steps_per_episode = 100
+max_steps_per_episode = 1000
 env = PongGym()
 env.seed(seed)
 eps = np.finfo(np.float32).eps.item()
 
 num_inputs = 5 # From the game state
 num_actions = 3
-num_hidden = 128
+num_hidden = 3
 
 inputs = layers.Input(shape=(num_inputs,))
-common = layers.Dense(num_hidden, activation="relu")(inputs)
+common = layers.Dense(num_hidden, activation="sigmoid")(inputs)
 action = layers.Dense(num_actions, activation="softmax")(common)
 critic = layers.Dense(1)(common)
 
 model = keras.Model(inputs=inputs, outputs=[action, critic])
 
-optimiser = keras.optimizers.Adam(learning_rate=0.01)
+optimiser = keras.optimizers.Adam(learning_rate=0.05)
 huber_loss = keras.losses.Huber()
 action_probs_history = []
 critic_value_history = []
@@ -158,13 +133,15 @@ while True:
         rewards_history.clear()
     
     episode_count += 1
+    print("Episodes completed:", episode_count)
     if episode_count % 10 == 0:
         print("running reward:", str(running_reward), "at episode", str(episode_count))
         model.save("models/episode_" + str(episode_count))
         model.save("models/final")
     
-    if running_reward > 30:
+    if running_reward > 10000:
         print("Solved at episode", str(episode_count))
         break
 
 model.save("models/final")
+print("Training completed successfully")
