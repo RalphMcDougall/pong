@@ -122,7 +122,7 @@ class PongGame:
 class PongPlayer:
 
     def __init__(self):
-        pass
+        self.name = "Generic Pong Player"
 
     def reset(self):
         pass
@@ -137,7 +137,7 @@ class PongPlayer:
 class UserControlledPongPlayer(PongPlayer):
 
     def __init__(self):
-        pass
+        self.name = "Human player"
 
     def makeMove(self, boardState):
         resultMove = PongGame.MOVE_STAY
@@ -154,7 +154,7 @@ class UserControlledPongPlayer(PongPlayer):
 class BasicPongPlayer(PongPlayer):
 
     def __init__(self):
-        pass
+        self.name = "Basic player"
 
     def makeMove(self, boardState):
         resultMove = PongGame.MOVE_STAY
@@ -168,6 +168,7 @@ class BasicPongPlayer(PongPlayer):
 class PerfectPongPlayer(PongPlayer):
 
     def __init__(self):
+        self.name = "Perfect player"
         self.reset()
     
     def reset(self):
@@ -219,6 +220,7 @@ class PerfectPongPlayer(PongPlayer):
 class MLPongPlayer(PongPlayer):
 
     def __init__(self, model=None):
+        self.name = "ML player"
         self.model = keras.models.load_model(model if model else "ml_models/final")
         self.model = tf.keras.Sequential([self.model, 
                                          tf.keras.layers.Softmax()])
@@ -236,9 +238,11 @@ class MLPongPlayer(PongPlayer):
 
         return nextMoveInd
 
+
 class FirstMLPongPlayer(MLPongPlayer):
     def __init__(self):
         super().__init__("ml_models/firstmodel")
+        self.name = "First ML model"
 
 class RLPongPlayer(PongPlayer):
 
@@ -247,6 +251,7 @@ class RLPongPlayer(PongPlayer):
         self.model = keras.models.load_model("models/final")
         print(self.model.summary())
         print("Model: " + str(self.model))
+        self.name = "RL player"
 
     def makeMove(self, boardState):
         state = tf.convert_to_tensor(boardState)
@@ -266,6 +271,7 @@ class DummyPongPlayer(PongPlayer):
     
     def __init__(self):
         self.nextMove = PongGame.MOVE_STAY
+        self.name = "Sparring dummy"
     
     def makeMove(self, boardState):
         return self.nextMove
